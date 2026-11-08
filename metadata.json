@@ -1,0 +1,6 @@
+{
+  "name": "Messenger",
+  "description": "Android messaging app with Chats, Story, and Calls navigation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
