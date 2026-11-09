@@ -19,6 +19,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ui.chat.ChatViewModel
 import com.example.ui.components.MessengerBottomBar
 import com.example.ui.navigation.NavigationTab
 import com.example.ui.screens.CallsScreen
@@ -40,25 +43,37 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MessengerApp(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    chatViewModel: ChatViewModel = viewModel()
 ) {
     // Make 'Chats' the default launch screen
     var currentTab by rememberSaveable { mutableStateOf(NavigationTab.DEFAULT) }
+    val selectedContact by chatViewModel.selectedContact.collectAsStateWithLifecycle()
 
-    // Intercept back presses to return to Chats if on another tab
+    // Back handling:
+    // 1. If currently inside a chat conversation, back button returns to the Inbox
+    // 2. If on Story or Calls, back button returns to the default Chats tab
+    BackHandler(enabled = currentTab == NavigationTab.CHATS && selectedContact != null) {
+        chatViewModel.selectContact(null)
+    }
     BackHandler(enabled = currentTab != NavigationTab.CHATS) {
         currentTab = NavigationTab.CHATS
     }
 
+    // Hide bottom navigation when inside a chat conversation for maximum keyboard & message space
+    val showBottomBar = !(currentTab == NavigationTab.CHATS && selectedContact != null)
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         bottomBar = {
-            MessengerBottomBar(
-                currentTab = currentTab,
-                onTabSelected = { selectedTab ->
-                    currentTab = selectedTab
-                }
-            )
+            if (showBottomBar) {
+                MessengerBottomBar(
+                    currentTab = currentTab,
+                    onTabSelected = { selectedTab ->
+                        currentTab = selectedTab
+                    }
+                )
+            }
         }
     ) { innerPadding ->
         AnimatedContent(
@@ -68,7 +83,7 @@ fun MessengerApp(
             modifier = Modifier.padding(innerPadding)
         ) { tab ->
             when (tab) {
-                NavigationTab.CHATS -> ChatsScreen()
+                NavigationTab.CHATS -> ChatsScreen(viewModel = chatViewModel)
                 NavigationTab.STORY -> StoryScreen()
                 NavigationTab.CALLS -> CallsScreen()
             }
